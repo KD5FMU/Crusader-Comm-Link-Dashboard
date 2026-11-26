@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+install_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+case "${1:-}" in
+  '') release=current ;;
+  --previous) release=previous ;;
+  *) echo 'Usage: crusader [--previous]' >&2; exit 2 ;;
+esac
+if [[ ! -f "$install_dir/$release/local_console.py" || ! -f "$install_dir/launch.args" ]]; then
+  printf 'No %s Crusader release is available.\n' "$release" >&2
+  exit 1
+fi
+args_file="$install_dir/launch.args"
+if [[ "$release" == previous && -f "$install_dir/previous.args" ]]; then
+  args_file="$install_dir/previous.args"
+fi
+mapfile -d '' -t options < "$args_file"
+exec python3 "$install_dir/$release/local_console.py" "${options[@]}"

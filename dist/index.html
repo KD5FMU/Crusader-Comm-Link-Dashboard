@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="An interactive AllStarLink 3 station console prototype.">
+<title>Crusader Comm/Link</title>
+<link rel="stylesheet" href="leaflet.css">
+<link rel="stylesheet" href="console.css?v=default-logo">
+<script>if (new URLSearchParams(location.search).get("live") === "1") document.documentElement.classList.add("session-pending");</script>
+<script defer src="leaflet.js"></script>
+<script defer src="console.js?v=default-logo"></script>
+</head>
+<body>
+<section id="landing" class="landing panel" hidden>
+  <p class="eyebrow">HAM RADIO CRUSADER</p>
+  <img id="landingForeground" alt="Station artwork" hidden>
+  <h1>Crusader Comm/Link Dashboard Landing Page</h1>
+  <p id="landingWelcome" hidden></p>
+  <form id="signIn">
+    <label>Username <input id="signInName" autocomplete="username" required maxlength="40"></label>
+    <label>Password <input id="signInPassword" type="password" autocomplete="current-password" required maxlength="128"></label>
+    <button class="primary">Sign in</button>
+    <p id="signInStatus" role="status"></p>
+  </form>
+</section>
+<header class="mast">
+<div class="brand"><span class="insignia"><span id="brandGlyph" aria-hidden="true">◈</span><img id="brandLogo" alt="Station logo" hidden></span><div><strong>CRUSADER</strong><small>COMM/LINK / ASL3</small></div></div>
+<div class="utilities"><span class="demo"><i></i> HOSTED DEMO</span><a id="openLocal" class="local-shortcut" href="http://127.0.0.1:8877/?live=1" target="_blank" rel="noopener">Open local dashboard</a><button id="theme">☀ Day mode</button><button id="openTools" hidden>Station tools</button><button id="openCaller">Live Caller ↗</button><button id="customize">Configuration</button><button id="administration" hidden>Administration</button><button id="signOut" hidden>Sign out</button></div>
+</header>
+<main id="dashboard">
+<div class="intro"><div><p id="stationEyebrow" class="eyebrow">HAM RADIO CRUSADER</p><h1 id="stationTitle">Station overview</h1></div><div class="station-status"><time id="stationClock" class="station-clock"></time><div class="station-status-row"><div id="radioIndicators" class="radio-indicators" role="group" aria-label="Radio activity">
+<span id="radioTx" role="img">TX</span><span id="radioRx" role="img">RX</span><span id="radioCos" role="img">COS</span>
+</div><div class="station-id"><span class="eyebrow">CONTROL NODE</span><strong id="controlNode">61000 <small>DEMO / ST. LOUIS</small></strong></div></div></div></div>
+<p id="layoutStatus" class="visually-hidden" role="status"></p>
+<div id="layout" class="layout">
+<section class="panel" data-module="ticker" aria-label="Status ticker">
+
+<div id="tickerBody" class="ticker-body"><div id="tickerViewport" class="ticker-viewport"><ul id="tickerItems" aria-live="off"></ul></div></div>
+</section>
+<section class="panel network" data-module="map" aria-label="Network map">
+<header class="panel-head"><div><p class="eyebrow">ALLSTARLINK NETWORK</p><h2>Link map</h2></div><div class="panel-actions"><button class="pop-button" data-pop="map">Pop out</button></div></header>
+<div class="map-shell"><div id="linkMap" aria-label="Interactive map of connected demo stations"></div><div class="legend"><span><i></i> Linked</span><span id="txLegend"><i></i> Transmitting</span></div></div>
+<div class="weather-toolbar" aria-label="Weather overlays">
+  <label>Radar <select id="mapRadar"><option value="off">Off</option><option value="us">United States</option><option value="world">Global coverage</option></select></label>
+  <button id="mapRadarPlay" type="button" disabled>Play radar</button>
+  <label><input id="mapCounties" type="checkbox"> U.S. counties</label>
+  <label><input id="mapWarnings" type="checkbox"> NWS watches &amp; warnings</label>
+  <span id="mapWeatherStatus" role="status"></span>
+</div>
+<footer class="map-footer"><span id="traffic" aria-live="polite"></span><div><button id="fit">Fit network</button> <button id="simulate" class="primary">Simulate RX</button></div></footer>
+</section>
+<section class="panel nodes" data-module="nodes" aria-label="Node control">
+<header class="panel-head"><div><h2>Node Control</h2></div><div class="panel-actions"><button class="pop-button" data-pop="nodes">Pop out</button></div></header>
+<div class="node-body">
+<form id="liveControl" hidden>
+<div class="fields">
+<select id="livePeer" aria-label="Peer node" required></select>
+<input id="livePeerEntry" aria-label="Peer node number" type="text" inputmode="numeric" pattern="[1-9][0-9]{2,9}" maxlength="10" placeholder="Node number" required disabled hidden>
+<select id="liveAction" aria-label="Link command"><option value="monitor">Connect monitor</option><option value="transceive">Connect transceive</option><option value="local-monitor">Connect local monitor</option><option value="permanent-transceive">Permanent transceive</option><option value="permanent-monitor">Permanent monitor</option><option value="permanent-local-monitor">Permanent local monitor</option><option value="disconnect">Disconnect</option><option value="disconnect-permanent">Disconnect permanent link</option></select>
+<button class="primary">Send</button>
+</div>
+
+<div class="favorites-row">
+<select id="liveFavorites" aria-label="Favorite nodes"><option value="">Favorites</option></select>
+<button id="saveFavorite" type="button">Save favorite</button>
+<button id="removeFavorite" type="button" disabled>Remove favorite</button>
+</div>
+</form>
+<p id="liveCommandStatus" role="status"></p>
+<form id="connect"><label for="nodeInput">Connect a demo station</label><div class="fields"><select id="nodeInput" required></select><select id="mode" aria-label="Link mode"><option>Transceive</option><option>Monitor</option><option>Permanent</option></select><button class="primary">Connect</button></div></form>
+<p id="feedback" role="status"></p>
+</div>
+</section>
+<section class="panel" data-module="linked" aria-label="Nodes Linked">
+<header class="panel-head"><div><h2>Nodes Linked <span id="count"></span></h2></div><div class="panel-actions"><button class="pop-button" data-pop="linked">Pop out</button></div></header>
+<div class="node-body"><p id="liveStatus" hidden></p><div id="links"></div></div>
+</section>
+<section class="panel weather" data-module="weather" aria-label="Current conditions">
+<header class="panel-head"><div><p class="eyebrow">DEMO WEATHER</p><h2>Current conditions</h2></div><div class="panel-actions"><button class="pop-button" data-pop="weather">Pop out</button></div></header>
+<div class="weather-body"><span class="weather-glyph" aria-hidden="true">☁</span><div><strong id="temperature">54°F</strong><p>Cloudy · St. Louis, MO</p></div><dl><div><dt>Wind</dt><dd id="wind">NW 9 mph</dd></div><div><dt>Humidity</dt><dd>68%</dd></div></dl></div>
+</section>
+<section class="panel radar" data-module="radar" aria-label="Weather radar">
+<header class="panel-head"><div><p class="eyebrow">DEMO PRECIPITATION</p><h2>Weather radar</h2></div><div class="panel-actions"><button class="pop-button" data-pop="radar">Pop out</button></div></header>
+<div id="radarMap" aria-label="Interactive map with simulated precipitation"></div>
+<footer class="radar-footer"><span>Light</span><span class="scale"></span><span>Heavy</span></footer>
+</section>
+<section class="panel" data-module="skywarn" aria-label="SkywarnPlus">
+<header class="panel-head"><div><p class="eyebrow">LOCAL ALERT STATUS</p><h2>SkywarnPlus</h2></div><div class="panel-actions"><button class="pop-button" data-pop="skywarn">Pop out</button></div></header>
+<div class="alert-body"><strong id="skyState">Checking integration…</strong><p id="skyDetail"></p><pre id="skyAlerts" hidden></pre></div>
+</section>
+</div>
+</main>
+<main id="caller" hidden>
+  <header class="caller-header"><div><p class="eyebrow">CRUSADER COMM/LINK</p><h1>Live Caller</h1></div><a id="callerDashboard" class="local-shortcut" href="./">Dashboard</a></header>
+  <section class="caller-display" id="callerDisplay">
+    <p id="callerState" class="eyebrow" role="status">Waiting for activity</p>
+    <div class="caller-identity-row">
+      <div><h2 id="callerIdentity">—</h2><p id="callerLocation"></p></div>
+      <figure id="callerCountry" hidden><img id="callerFlag" alt=""><figcaption id="callerCountryName"></figcaption></figure>
+    </div>
+    <dl class="caller-facts">
+      <div><dt>Source</dt><dd id="callerSource">—</dd></div>
+      <div><dt>Control node</dt><dd id="callerTarget">—</dd></div>
+      <div><dt>Observed duration</dt><dd id="callerDuration">—</dd></div>
+      <div><dt>Last heard</dt><dd id="callerLastHeard">—</dd></div>
+    </dl>
+    <p id="callerAdditional" hidden></p>
+  </section>
+</main>
+<main id="configuration" hidden>
+<header class="configuration-heading"><h1 id="configurationTitle" tabindex="-1">Configuration</h1><button id="backDashboard">Back to dashboard</button></header>
+<div class="configuration-grid">
+<nav id="configurationNav" aria-label="Configuration sections"></nav>
+<section class="panel configuration-panel" aria-labelledby="settingsTitle">
+<header class="panel-head"><h2 id="settingsTitle">Station heading</h2></header>
+<div id="tickerPlayback" class="configuration-playback" hidden><button class="pop-button" data-pop="ticker">Pop out</button><button id="tickerPause" aria-pressed="false">Pause</button><div class="ticker-controls"><button id="tickerPrevious" type="button" aria-label="Previous update">‹</button><span id="tickerPosition"></span><button id="tickerNext" type="button" aria-label="Next update">›</button></div></div>
+<div id="tickerPreview" class="ticker-body" hidden></div>
+<div id="settingsBody"></div>
+</section>
+</div>
+</main>
+<dialog id="stationTools" aria-labelledby="stationToolsTitle">
+  <form method="dialog"><header class="panel-head"><h2 id="stationToolsTitle">Station tools</h2><button>Done</button></header></form>
+  <div class="station-tools-content">
+    <section><h3>Node lookup</h3>
+      <form id="stationLookup"><label>Node number <input id="stationLookupNode" required inputmode="numeric" pattern="[0-9]{3,10}"></label><button>Lookup</button></form>
+      <div class="station-tools-actions">
+        <a id="stationNodeInfo" target="_blank" rel="noopener" hidden>Node info</a>
+        <a id="stationBubbleChart" target="_blank" rel="noopener" hidden>Bubble chart</a>
+        <a href="https://stats.allstarlink.org/" target="_blank" rel="noopener">AllStarLink status</a>
+        <a href="https://stats.allstarlink.org/stats/active" target="_blank" rel="noopener">Active nodes</a>
+        <a href="https://www.allstarlink.org/nodelist/" target="_blank" rel="noopener">All nodes</a>
+      </div>
+    </section>
+    <section><h3>Diagnostics</h3><div class="station-tools-actions">
+      <button data-report="rpt-stats">Repeater stats</button><button data-report="connections">Connection status</button>
+      <button data-report="topology">Linked topology</button><button id="openLinkMap">Link map ↗</button><button data-report="cpu">CPU and uptime</button>
+    </div></section>
+    <section id="operatorTools" hidden><h3>Local repeater</h3>
+      <form id="stationDtmf"><label>DTMF digits <input id="stationDigits" required maxlength="16" pattern="[0-9*#A-Da-d]{1,16}"></label><button>Send DTMF</button></form>
+      <div class="station-tools-actions"><button data-station-action="identify">Announce ID</button><button data-station-action="time">Announce time</button></div>
+    </section>
+    <section id="localAdminTools" hidden><h3>Local administration</h3><div class="station-tools-actions">
+      <button data-station-action="reload">Reload IAX, app_rpt and dialplan</button>
+      <button data-station-action="start">Start Asterisk</button><button data-station-action="stop">Stop Asterisk</button>
+      <button data-station-action="restart">Restart Asterisk</button><button data-station-action="reboot">Reboot server</button>
+      <button data-report="database">Asterisk database</button><button data-report="connection-log">Connection log</button><button data-report="linux">Linux log</button><button data-report="asterisk">Asterisk log</button>
+      <button data-report="web-access">Web access log</button><button data-report="web-error">Web error log</button>
+      <button id="openEditor">Configuration editor</button>
+    </div>
+    <form id="stationEditor" hidden>
+      <label>File <select id="stationConfigFile"><option>rpt.conf</option><option>iax.conf</option><option>extensions.conf</option></select></label>
+      <button id="loadStationConfig" type="button">Open file</button>
+      <textarea id="stationConfigText" rows="12" aria-label="Asterisk configuration" disabled></textarea>
+      <button id="saveStationConfig" disabled>Save file</button>
+    </form></section>
+    <section><h3>Documentation</h3><div class="station-tools-actions">
+      <a href="https://docs.allstarlink.org/" target="_blank" rel="noopener">AllStarLink manual</a>
+      <a href="https://github.com/AllStarLink/app_rpt/tree/master/configs" target="_blank" rel="noopener">Sample configuration files</a>
+      <a href="https://community.allstarlink.org/" target="_blank" rel="noopener">Support</a>
+    </div></section>
+    <p id="stationToolStatus" role="status"></p><pre id="stationToolOutput" hidden></pre>
+  </div>
+</dialog>
+<dialog id="adminDialog" aria-labelledby="adminTitle">
+<form method="dialog"><header class="panel-head"><h2 id="adminTitle">Administration</h2><button>Done</button></header></form>
+<div class="admin-body">
+  <h3>Accounts</h3>
+  <ul id="accountList"></ul>
+  <form id="accountForm" class="admin-form">
+    <label>Username <input id="accountName" required pattern="[A-Za-z0-9_.\-]{1,40}" maxlength="40" autocomplete="off"></label>
+    <label>Role <select id="accountRole"><option>Observer</option><option>Sysop</option><option>Administrator</option></select></label>
+    <label>Password <input id="accountPassword" required type="password" minlength="12" maxlength="128" autocomplete="new-password"></label>
+    <button>Save account</button>
+    <p>Saving an existing username replaces its password and role.</p>
+  </form>
+  <h3>Station logo</h3>
+  <p>Use a square PNG, JPEG, or WebP. Recommended size is 256 × 256 pixels. Maximum upload is 1 MB. The dashboard fits the image inside a transparent 256 × 256 PNG.</p>
+  <form id="logoForm" class="admin-form">
+    <label>Logo image <input id="logoFile" type="file" accept="image/png,image/jpeg,image/webp" required></label>
+    <div><button>Upload logo</button> <button type="button" id="resetLogo">Restore default logo</button></div>
+  </form>
+  <details>
+    <summary>Landing page appearance</summary>
+    <form id="landingForm" class="admin-form">
+      <label>Welcome text <textarea id="landingText" maxlength="1200" rows="3"></textarea></label>
+      <label>Font <select id="landingFont"><option value="oxanium">Oxanium</option><option value="system">System sans-serif</option><option value="serif">Serif</option><option value="mono">Monospace</option><option value="custom">Uploaded font</option></select></label>
+      <label>Custom font <input id="landingFontFile" type="file" accept=".woff,.woff2,.ttf,.otf"></label>
+      <label class="inline-control"><input id="landingFontRemove" type="checkbox"> Remove uploaded font</label>
+      <small>WOFF2, WOFF, TTF, or OTF up to 2 MB.</small>
+      <label>Foreground image <input id="landingForegroundFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
+      <label class="inline-control"><input id="landingForegroundRemove" type="checkbox"> Remove foreground image</label>
+      <small>PNG, JPEG, or WebP up to 5 MB. A square 640 × 640 image works well.</small>
+      <label>Background image <input id="landingBackgroundFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
+      <label class="inline-control"><input id="landingBackgroundRemove" type="checkbox"> Remove background image</label>
+      <small>PNG, JPEG, or WebP up to 5 MB. Use a wide image, ideally 1280 × 720 or larger.</small>
+      <button>Save landing page</button>
+      <p id="landingAdminStatus" role="status"></p>
+    </form>
+  </details>
+  <p id="adminStatus" role="status"></p>
+</div>
+</dialog>
+</body>
+</html>
