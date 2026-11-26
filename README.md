@@ -11,7 +11,7 @@ The repository is public. To install, you need SSH access to your Debian-based A
 
 ```sh
 sudo apt install git python3 python3-yaml
-git clone --branch v0.1.0-beta.2 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git
+git clone --branch v0.1.0-beta.3 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git
 cd Crusader-Comm-Link-Dashboard
 bash install.sh
 ```
@@ -22,7 +22,7 @@ The installer writes to `${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link
 
 ## Start and open the dashboard
 
-Choose **Yes** when the installer offers to start Crusader automatically at boot. Setup creates the administrator account if needed and asks for the AMI secret if telemetry is enabled. The service runs as your node login account and keeps the AMI credential in an owner-readable local file. Enabling user services at boot may require your sudo password once.
+Choose **Yes** when the installer offers to start Crusader automatically at boot. Setup creates the administrator account if needed and asks for the AMI secret if telemetry is enabled. The service runs as your node login account and keeps the AMI credential in an owner-readable local file. Enabling user services at boot may require your sudo password. The installer can start the user manager when a terminal session does not already have access to it.
 
 To add the service to an existing installation or refresh its credentials, run the following on the node. Stop a foreground Crusader process with **Ctrl+C** first if it is using the dashboard port.
 

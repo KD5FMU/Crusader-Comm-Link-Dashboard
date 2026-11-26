@@ -4,6 +4,11 @@ set -euo pipefail
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 install_dir="${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link"
 
+if [[ -S "/run/user/$UID/bus" ]] && ! systemctl --user show-environment >/dev/null 2>&1; then
+  export XDG_RUNTIME_DIR="/run/user/$UID"
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
+
 case "${1:-}" in
   -h|--help)
     printf '%s\n' 'Usage: bash install.sh [--reconfigure]' \
@@ -30,7 +35,7 @@ if [[ -f "$install_dir/launch.args" && $# -eq 0 ]]; then
   bash "$source_dir/install-local.sh"
   if systemctl --user is-enabled --quiet crusader.service 2>/dev/null; then
     systemctl --user restart crusader.service
-  elif [[ -t 0 ]] && systemctl --user show-environment >/dev/null 2>&1; then
+  elif [[ -t 0 ]] && { [[ -d /run/systemd/system ]] || systemctl --user show-environment >/dev/null 2>&1; }; then
     read -r -p 'Set up Crusader to start automatically at boot? [Y/n] ' service_answer
     if [[ -z "$service_answer" || "${service_answer,,}" == y || "${service_answer,,}" == yes ]]; then
       bash "$source_dir/install-service.sh"
@@ -137,7 +142,7 @@ if [[ -n "$answer" ]]; then args+=(--warnings "$answer"); fi
 bash "$source_dir/install-local.sh" "${args[@]}"
 if systemctl --user is-enabled --quiet crusader.service 2>/dev/null; then
   bash "$source_dir/install-service.sh"
-elif systemctl --user show-environment >/dev/null 2>&1; then
+elif [[ -d /run/systemd/system ]] || systemctl --user show-environment >/dev/null 2>&1; then
   ask 'Start Crusader automatically at boot? (Y/n)' Y
   if [[ "${answer,,}" == y || "${answer,,}" == yes ]]; then
     bash "$source_dir/install-service.sh"

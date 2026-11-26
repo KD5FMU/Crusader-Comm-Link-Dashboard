@@ -12,17 +12,31 @@ if [[ ! -x "$launcher" ]]; then
   printf 'Run bash install.sh before configuring the service.\n' >&2
   exit 1
 fi
-if ! systemctl --user show-environment >/dev/null 2>&1; then
-  printf 'A systemd user session is required. Sign in directly to the node with SSH and try again.\n' >&2
+if ! systemctl show --property=Version >/dev/null 2>&1 && ! systemctl --user show-environment >/dev/null 2>&1; then
+  printf 'A running systemd host is required for automatic startup. The manual launcher is available.\n' >&2
   exit 1
 fi
 
-"$launcher" --setup-service
 user=$(id -un)
 if [[ $(loginctl show-user "$user" -p Linger --value) != yes ]]; then
   printf 'Enabling this account’s user services to start at boot. Sudo may ask for your password.\n'
   sudo loginctl enable-linger "$user"
 fi
+
+# Some SSH or web terminals do not inherit the user manager's bus address.
+if ! systemctl --user show-environment >/dev/null 2>&1; then
+  export XDG_RUNTIME_DIR="/run/user/$UID"
+  export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
+if ! systemctl --user show-environment >/dev/null 2>&1; then
+  sudo systemctl start "user@$UID.service"
+fi
+if ! systemctl --user show-environment >/dev/null; then
+  printf 'Could not reach the systemd user manager even after starting it.\n' >&2
+  exit 1
+fi
+
+"$launcher" --setup-service
 
 unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 mkdir -p -- "$unit_dir"
