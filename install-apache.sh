@@ -75,4 +75,11 @@ fi
 printf '%s\n' "$origin" > "$data_dir/https-origin"
 systemctl --user restart crusader.service
 sudo systemctl reload apache2
-printf 'Open %s/crusader/ from your LAN using your browser.\n' "$origin"
+if ! curl --noproxy '*' -kfsS --retry 3 --retry-connrefused --max-time 5 \
+    --resolve "${origin#https://}:443:127.0.0.1" "$origin/crusader/?live=1" |
+    grep -F '<title>Crusader Comm/Link</title>' >/dev/null; then
+  printf 'The Apache route was configured but the dashboard page could not be verified. See the README.\n' >&2
+  exit 1
+fi
+printf '\nOpen %s/crusader/?live=1 in a browser on your local network.\n' "$origin"
+printf 'If your browser reports a certificate warning, verify and trust the node certificate before signing in.\n'

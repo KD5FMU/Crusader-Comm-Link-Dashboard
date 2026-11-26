@@ -7,54 +7,56 @@ Crusader is an AllStarLink 3 dashboard for monitoring and operating a local stat
 
 ## Install the beta
 
-The repository is public. To install, you need SSH access to your Debian-based ASL3 node, Git, Python 3, and PyYAML. Run the following on the ASL3 node as your normal login user.
+Run these commands in a terminal **on the ASL3 node** as your normal login user. A new install uses the node’s existing Apache HTTPS site for browser access.
 
 ```sh
-sudo apt install git python3 python3-yaml
-git clone --branch v0.1.0-beta.4 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git
-cd Crusader-Comm-Link-Dashboard
+sudo apt install git curl python3 python3-yaml &&
+git clone --branch v0.1.0-beta.6 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git &&
+cd Crusader-Comm-Link-Dashboard &&
 bash install.sh
 ```
 
-The installer checks `rpt localnodes` and offers the detected node as the default when there is one. If the live query is unavailable, it checks numeric sections in readable `/etc/asterisk/rpt.conf`. You can enter the node manually. Setup also asks for the dashboard port, an optional local Asterisk Manager Interface (AMI) username, peer permissions for link control, and optional SkywarnPlus paths. AMI is needed for per-link receive activity and TX/RX/COS telemetry.
+If you already cloned the repository, use the update commands below.
 
-The installer writes to `${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link`. Asterisk and SkywarnPlus configuration and host permissions are managed separately. The dashboard works with one selected local control node per instance.
+1. Confirm your AllStarLink node number. The installer suggests it when it finds one. Press Enter at the advanced settings prompt to use port 8877 and automatic SkywarnPlus detection.
+2. Enter an existing Asterisk Manager Interface (AMI) username if you want radio activity indicators and dashboard link control. You can leave it blank for basic monitoring. If you enable link control, you can allow specific nodes or all nodes.
+3. Accept **Start Crusader automatically at boot** and create your Crusader administrator account when prompted. The installer asks for your AMI secret if you entered an AMI username.
+4. Accept **Make Crusader available in browsers on your local network**. Confirm the suggested hostname and network range if they match your setup. Enter your sudo password if prompted.
 
-## Start and open the dashboard
+## Open Crusader
 
-Choose **Yes** when the installer offers to start Crusader automatically at boot. Setup creates the administrator account if needed and asks for the AMI secret if telemetry is enabled. The service runs as your node login account and keeps the AMI credential in an owner-readable local file. Enabling user services at boot may require your sudo password. The installer can start the user manager when a terminal session does not already have access to it.
+Copy the address printed at the end of setup into a browser on another computer on the same network. For example, use `https://node576332.local/crusader/?live=1`. Sign in with the Crusader administrator account you created. If your browser warns about the HTTPS certificate, verify and trust the node’s certificate before signing in.
 
-To add the service to an existing installation or refresh its credentials, run the following on the node. Stop a foreground Crusader process with **Ctrl+C** first if it is using the dashboard port.
+Crusader runs as a background service and starts again after a node reboot. You can close the installation terminal and bookmark the dashboard address.
 
-```sh
-bash install-service.sh
-```
+### Manual network setup
 
-From another computer, open an SSH tunnel when you need remote access. This example uses the default port 8877.
-
-```sh
-ssh -N -o ExitOnForwardFailure=yes -L 8877:127.0.0.1:8877 YOUR_NODE_USER@YOUR_NODE_HOST
-```
-
-Open [the live dashboard](http://127.0.0.1:8877/?live=1). Only the tunnel needs to stay open on your workstation. The dashboard runs on loopback and starts again after a node reboot.
-
-If you prefer manual startup, decline the service and run `"${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link/crusader"` on the node.
-
-## Open Crusader from your LAN
-
-If Apache already serves HTTPS on your ASL3 node, you can add a private-LAN route to the running Crusader service. From the repository directory on the node, run the following with your actual HTTPS hostname and LAN subnet. The hostname must match the address you use in the browser.
+The browser setup uses an existing Apache HTTPS site and its certificate. If the node lacks an HTTPS site, configure one with a certificate valid for the node’s hostname, then rerun `bash install.sh`. For a custom HTTPS hostname or network range, you can also run the helper directly on the node.
 
 ```sh
 bash install-apache.sh https://node.example.local 192.168.1.0/24
 ```
 
-Open `https://node.example.local/crusader/` on your workstation and sign in. The helper enables the Apache reverse proxy, restricts the route to the supplied private subnet, and restarts Crusader. Use an HTTPS certificate your browser trusts. Preferences stored by the browser are scoped to the dashboard address.
+If you choose to keep Crusader on loopback only, you can still use an SSH tunnel from your workstation. Adjust both ports if you chose a different dashboard port.
 
-To remove the LAN route, run `sudo a2disconf crusader-lan && sudo systemctl reload apache2`.
+```sh
+ssh -N -o ExitOnForwardFailure=yes -L 8877:127.0.0.1:8877 YOUR_NODE_USER@YOUR_NODE_HOST
+```
+
+Then open `http://127.0.0.1:8877/?live=1`. To start Crusader manually on the node, run `"${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link/crusader"`. To refresh service credentials, run `bash install-service.sh`.
 
 ## Update, reconfigure, or roll back
 
-Fetch and check out the new beta tag, then run `bash install.sh` again. It reuses your saved settings and restarts the enabled service. Stop a manually launched dashboard before updating. Run `bash install.sh --reconfigure` to choose new settings. Use the launcher with `--previous` for a manual rollback after stopping the running dashboard.
+Run this from your normal login account on the node.
+
+```sh
+cd "$HOME/Crusader-Comm-Link-Dashboard" &&
+git fetch --tags &&
+git checkout v0.1.0-beta.6 &&
+bash install.sh
+```
+
+The installer reuses your saved settings and restarts the enabled service. Stop a manually launched dashboard before updating. Run `bash install.sh --reconfigure` to choose new settings. Use the launcher with `--previous` for a manual rollback after stopping the running dashboard.
 
 Use `systemctl --user status crusader.service` to check the service and `journalctl --user -u crusader.service -n 50` to see recent logs. To turn off automatic startup, run `systemctl --user disable --now crusader.service`.
 
@@ -84,7 +86,9 @@ Run these steps on the node as the account that installed Crusader.
 
    The remaining directory contains launch settings, accounts, branding, and any stored AMI credential. For a **complete removal**, back up anything you want to keep and delete the `crusader-comm-link` directory instead. The repository checkout can be deleted separately.
 
-3. Close any SSH tunnel you opened for Crusader. If you want to remove browser-only preferences, clear site data for the dashboard address.
+3. If you enabled LAN access, remove the Crusader Apache route with `sudo a2disconf crusader-lan && sudo apache2ctl configtest && sudo systemctl reload apache2 && sudo rm /etc/apache2/conf-available/crusader-lan.conf`.
+
+4. Close any SSH tunnel you opened for Crusader. If you want to remove browser-only preferences, clear site data for the dashboard address.
 
 These steps are limited to Crusader. User lingering is an account-wide systemd setting, so leave it enabled if other user services rely on it.
 

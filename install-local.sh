@@ -56,4 +56,8 @@ if [[ -f "$staging/launch.args" ]]; then
 fi
 mv -Tf -- "$staging/current" "$install_dir/current"
 mv -Tf -- "$staging/crusader" "$install_dir/crusader"
-printf 'Installed Crusader Comm/Link. Start it with:\n  %q\n' "$install_dir/crusader"
+if [[ "${CRUSADER_INSTALL_WIZARD:-}" == 1 ]]; then
+  printf 'Installed Crusader Comm/Link.\n'
+else
+  printf 'Installed Crusader Comm/Link. Start it with:\n  %q\n' "$install_dir/crusader"
+fi
