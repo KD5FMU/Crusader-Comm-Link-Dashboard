@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="console.css?v=default-logo">
 <script>if (new URLSearchParams(location.search).get("live") === "1") document.documentElement.classList.add("session-pending");</script>
 <script defer src="leaflet.js"></script>
-<script defer src="console.js?v=default-logo"></script>
+<script defer src="console.js?v=local-weather"></script>
 </head>
 <body>
 <section id="landing" class="landing panel" hidden>
@@ -76,14 +76,9 @@
 <header class="panel-head"><div><h2>Nodes Linked <span id="count"></span></h2></div><div class="panel-actions"><button class="pop-button" data-pop="linked">Pop out</button></div></header>
 <div class="node-body"><p id="liveStatus" hidden></p><div id="links"></div></div>
 </section>
-<section class="panel weather" data-module="weather" aria-label="Current conditions">
-<header class="panel-head"><div><p class="eyebrow">DEMO WEATHER</p><h2>Current conditions</h2></div><div class="panel-actions"><button class="pop-button" data-pop="weather">Pop out</button></div></header>
-<div class="weather-body"><span class="weather-glyph" aria-hidden="true">☁</span><div><strong id="temperature">54°F</strong><p>Cloudy · St. Louis, MO</p></div><dl><div><dt>Wind</dt><dd id="wind">NW 9 mph</dd></div><div><dt>Humidity</dt><dd>68%</dd></div></dl></div>
-</section>
-<section class="panel radar" data-module="radar" aria-label="Weather radar">
-<header class="panel-head"><div><p class="eyebrow">DEMO PRECIPITATION</p><h2>Weather radar</h2></div><div class="panel-actions"><button class="pop-button" data-pop="radar">Pop out</button></div></header>
-<div id="radarMap" aria-label="Interactive map with simulated precipitation"></div>
-<footer class="radar-footer"><span>Light</span><span class="scale"></span><span>Heavy</span></footer>
+<section class="panel weather" data-module="weather" aria-label="Local weather conditions">
+<header class="panel-head"><div><h2>Local weather conditions</h2></div><div class="panel-actions"><button class="pop-button" data-pop="weather">Pop out</button></div></header>
+<div class="weather-body"><div><strong id="temperature">—</strong><p id="weatherSummary">Loading local weather…</p></div><dl hidden><div><dt>Wind</dt><dd id="wind"></dd></div><div><dt>Humidity</dt><dd id="humidity"></dd></div></dl></div>
 </section>
 <section class="panel" data-module="skywarn" aria-label="SkywarnPlus">
 <header class="panel-head"><div><p class="eyebrow">LOCAL ALERT STATUS</p><h2>SkywarnPlus</h2></div><div class="panel-actions"><button class="pop-button" data-pop="skywarn">Pop out</button></div></header>

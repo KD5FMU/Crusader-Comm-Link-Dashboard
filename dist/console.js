@@ -9,7 +9,7 @@ const stations = {
   61006: { call: 'N0DEMO', city: 'Location unavailable', coords: null }
 };
 const home = [38.63, -90.20];
-const modules = {ticker:'Status ticker', map:'Link map', nodes:'Node Control', linked:'Nodes Linked', weather:'Current conditions', radar:'Weather radar', skywarn:'SkywarnPlus'};
+const modules = {ticker:'Status ticker', map:'Link map', nodes:'Node Control', linked:'Nodes Linked', weather:'Local weather conditions', skywarn:'SkywarnPlus'};
 const key = 'crusader-demo-v1';
 const palettes = {crusader:'Crusader',forest:'Forest',copper:'Copper',slate:'Slate',violet:'Violet'};
 const defaults = {
@@ -53,8 +53,6 @@ const defaults = {
   defaultMode: 'Transceive',
   units: 'us',
   weatherDetails: true,
-  radarOpacity: 'standard',
-  radarLegend: true,
   links: {61001:'Transceive',61002:'Transceive',61003:'Monitor'},
   tx: null
 };
@@ -76,7 +74,7 @@ const read = () => {
   catch { return defaults; }
 };
 let state = read();
-const laneDefaults = {ticker:'top',map:'main',nodes:'side',linked:'side',weather:'side',radar:'main',skywarn:'side'};
+const laneDefaults = {ticker:'top',map:'main',nodes:'side',linked:'side',weather:'side',skywarn:'side'};
 const layoutPanels = Object.fromEntries([...byId('layout').children].map(panel => [panel.dataset.module,panel]));
 const workspaceLanes = Object.fromEntries(['top','main','side'].map(id => {
   const element = document.createElement('div');
@@ -92,11 +90,10 @@ const callerOnly = new URLSearchParams(location.search).get("view") === "caller"
 const panelOnly = Object.hasOwn(modules, detached);
 document.body.classList.toggle('popout', panelOnly);
 
-let linkMap, radarMap, linksLayer, backgroundLayers = [];
+let linkMap, linksLayer, backgroundLayers = [];
 let pulseFrame, expiryTimer, path;
 let settingsSection = 'station';
 const configurationSections = {station:'Station heading',appearance:'Color themes',layout:'Layout',...modules};
-const radarCells = [];
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const color = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -149,16 +146,14 @@ async function loadBoundaries() {
       if (!response.ok) throw new Error(file);
       return response.json();
     }));
-    for (const map of [linkMap, radarMap]) {
-      datasets.forEach((data, index) => {
-        const layer = L.geoJSON(data, {interactive:false,pane:map === linkMap ? "network-base" : "overlayPane"}).addTo(map).bringToBack();
-        backgroundLayers.push({layer, index});
-      });
-      backgroundLayers.at(-2).layer.bringToBack();
-    }
+    datasets.forEach((data, index) => {
+      const layer = L.geoJSON(data, {interactive:false,pane:'network-base'}).addTo(linkMap).bringToBack();
+      backgroundLayers.push({layer, index});
+    });
+    backgroundLayers.at(-2).layer.bringToBack();
     styleBoundaries();
   } catch {
-    for (const map of [linkMap, radarMap]) map.getContainer().setAttribute('aria-description','Basemap unavailable');
+    linkMap.getContainer().setAttribute('aria-description','Basemap unavailable');
   }
 }
 function styleBoundaries() {
@@ -414,18 +409,12 @@ function render() {
   else { renderLinks(tx); renderMap(); renderRadioIndicators(tx); }
   renderTicker();
   renderSkywarn();
-  byId('temperature').textContent = state.units === 'metric' ? '12°C' : '54°F';
-  byId('wind').textContent = state.units === 'metric' ? 'NW 14 km/h' : 'NW 9 mph';
-  document.querySelector('.weather-body dl').hidden = !state.weatherDetails;
-  document.querySelector('.radar-footer').hidden = !state.radarLegend;
-  const fillOpacity = {light:.29,standard:.56,strong:.81}[state.radarOpacity];
-  radarCells.forEach(cell => cell.setStyle({fillOpacity}));
+  refreshLocalWeather();
 
   clearTimeout(expiryTimer);
   if (tx) expiryTimer = setTimeout(render, tx.until - Date.now() + 25);
   requestAnimationFrame(() => {
     if (!byId('linkMap').closest('[hidden]')) linkMap.invalidateSize();
-    if (!byId('radarMap').closest('[hidden]')) radarMap.invalidateSize();
   });
 }
 const preferences = {
@@ -444,10 +433,6 @@ const preferences = {
   weather: [
     ['units','Weather units',{us:'Fahrenheit and mph',metric:'Celsius and km/h'}],
     ['weatherDetails','Show wind and humidity']
-  ],
-  radar: [
-    ['radarOpacity','Precipitation intensity',{light:'Subtle',standard:'Standard',strong:'High contrast'}],
-    ['radarLegend','Show precipitation legend']
   ],
   ticker: [
     ['tickerNodes','Show linked node events'],
@@ -577,6 +562,60 @@ let watchKey, watchEntries = [], tickerSignature, weatherRequest = 0;
 let tickerItems = [], tickerIndex = 0, tickerTimer, tickerPaused;
 
 const conditions = {0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Freezing fog',95:'Thunderstorms'};
+let localWeatherKey, localWeatherRequest = 0;
+
+async function refreshLocalWeather(force = false) {
+  const place = parsePlaces(state.watchPlaces)?.[0];
+  const coords = liveMode ? stationCoords(liveSnapshot.node) : home;
+  const us = state.units === 'us';
+  const key = JSON.stringify([place ?? coords, us]);
+  const details = document.querySelector('.weather-body dl');
+  details.hidden = !state.weatherDetails || !details.dataset.ready;
+  if (!force && key === localWeatherKey) return;
+  const changed = key !== localWeatherKey;
+  localWeatherKey = key;
+  const request = ++localWeatherRequest;
+  const summary = byId('weatherSummary');
+
+  if (changed) {
+    delete details.dataset.ready;
+    details.hidden = true;
+    byId('temperature').textContent = '—';
+    summary.textContent = 'Loading local weather…';
+  }
+  if (!place && !coords) {
+    summary.textContent = 'Set a weather location in Configuration.';
+    return;
+  }
+  try {
+    const {name,lat,lon} = place ? await resolveWatchPlace(place) :
+      {name:liveMode ? 'Control node ' + liveSnapshot.node : 'St. Louis, MO',lat:coords[0],lon:coords[1]};
+    const query = new URLSearchParams({latitude:lat,longitude:lon,
+      current:'temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,wind_direction_10m',
+      temperature_unit:us ? 'fahrenheit' : 'celsius',wind_speed_unit:us ? 'mph' : 'kmh'});
+    const {current} = await fetchJson('https://api.open-meteo.com/v1/forecast?' + query);
+    if (request !== localWeatherRequest) return;
+    if (!Number.isFinite(current?.temperature_2m)) throw new Error('Missing temperature');
+    byId('temperature').textContent = current.temperature_2m + (us ? '°F' : '°C');
+    const code = current.weather_code;
+    const description = conditions[code] ?? (code >= 95 ? 'Thunderstorms' : code >= 85 ? 'Snow showers' :
+      code >= 80 ? 'Rain showers' : code >= 70 ? 'Snow' : code >= 60 ? 'Rain' : code >= 50 ? 'Drizzle' : '');
+    summary.textContent = [description,name,'Open-Meteo'].filter(Boolean).join(' · ');
+    const direction = ['N','NE','E','SE','S','SW','W','NW'][Math.round(current.wind_direction_10m / 45) % 8];
+    byId('wind').textContent = Number.isFinite(current.wind_speed_10m) ?
+      [direction,current.wind_speed_10m,us ? 'mph' : 'km/h'].filter(value => value != null).join(' ') : '—';
+    byId('humidity').textContent = Number.isFinite(current.relative_humidity_2m) ? current.relative_humidity_2m + '%' : '—';
+    details.dataset.ready = 'true';
+    details.hidden = !state.weatherDetails;
+  } catch {
+    if (request !== localWeatherRequest) return;
+    delete details.dataset.ready;
+    details.hidden = true;
+    byId('temperature').textContent = '—';
+    summary.textContent = 'Local weather unavailable.';
+  }
+}
+
 async function fetchJson(url) {
   const response = await fetch(url,{signal:AbortSignal.timeout(12000)});
   if (liveMode && account && response.status === 401 && url.startsWith('api/')) location.reload();
@@ -803,8 +842,8 @@ function addPresets(parent) {
   form.className = 'preset-controls';
   const builtIn = [
     {name:'Everyday Monitoring',layout:arrangement(defaults)},
-    {name:'Net Control Desk',layout:{...arrangement(defaults),order:['ticker','nodes','linked','map','skywarn','weather','radar'],sizes:{nodes:{width:'wide'},map:{width:'narrow'}},hidden:['radar','weather']}},
-    {name:'Severe Weather Watch',layout:{...arrangement(defaults),order:['ticker','skywarn','radar','weather','nodes','linked','map'],sizes:{radar:{width:'wide',height:'standard'},weather:{width:'narrow'},nodes:{width:'wide'}},hidden:['map']}}
+    {name:'Net Control Desk',layout:{...arrangement(defaults),order:['ticker','nodes','linked','map','skywarn','weather'],sizes:{nodes:{width:'wide'},map:{width:'narrow'}},hidden:['weather']}},
+    {name:'Severe Weather Watch',layout:{...arrangement(defaults),order:['ticker','skywarn','weather','nodes','linked','map'],sizes:{weather:{width:'narrow'},nodes:{width:'wide'}}}}
   ];
   const presets = [...builtIn,...state.layoutPresets];
   const name = document.createElement('input');
@@ -1217,20 +1256,9 @@ function enableWeatherOverlays() {
 
 linkMap = buildMap('linkMap',home,5);
 enableWeatherOverlays();
-radarMap = buildMap('radarMap',home,6);
 linksLayer = L.layerGroup().addTo(linkMap);
 linkMap.on('move zoom resize',queueMapLabels);
 document.fonts?.ready.then(queueMapLabels);
-const precipitation = [
-  [[39.6,-92.5],[39.9,-91.8],[39.6,-90.2],[38.9,-89.8],[38.3,-90.2],[38.6,-91.5]],
-  [[39.6,-91.9],[39.7,-91.4],[39.3,-90.3],[38.9,-90.2],[38.6,-90.6],[39.1,-91.2]],
-  [[39.4,-91.5],[39.4,-91.0],[39.0,-90.5],[38.9,-90.7],[39.0,-91.0]]
-];
-precipitation.forEach((points,index) => {
-  const hue = ['#2772a2','#35b281','#e6bf46'][index];
-  radarCells.push(L.polygon(points,{color:hue,weight:1,interactive:false}).addTo(radarMap));
-});
-L.circleMarker(home,{radius:5,color:'#e8f5ff',weight:2,fillOpacity:.4}).bindTooltip('St. Louis').addTo(radarMap);
 loadBoundaries();
 byId('theme').onclick = () => update({theme:state.theme === 'night' ? 'day' : 'night'});
 function showConfiguration(focus = false) {
@@ -1563,6 +1591,7 @@ async function refreshStationLocations() {
     locationFeedStatus = 'unavailable';
   }
   renderLiveMap();
+  refreshLocalWeather();
 }
 
 let liveActivity = {status:'disabled',active:[]};
@@ -2200,7 +2229,7 @@ async function startLive() {
   refreshActivity();
   refreshSkywarn();
   setInterval(refreshSkywarn,30000);
-  setInterval(() => refreshWatchWeather(true),300000);
+  setInterval(() => { refreshWatchWeather(true); refreshLocalWeather(true); },300000);
   setInterval(() => refreshNews(true),180000);
 }
 byId('tickerPause').onclick = () => update({tickerPaused:!state.tickerPaused});
@@ -2221,7 +2250,7 @@ else {
   render();
   refreshSkywarn();
   setInterval(refreshSkywarn,30000);
-  setInterval(() => refreshWatchWeather(true),300000);
+  setInterval(() => { refreshWatchWeather(true); refreshLocalWeather(true); },300000);
   if (!panelOnly || detached === 'map') fitNetwork();
   showConfiguration();
 }
