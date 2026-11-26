@@ -27,7 +27,16 @@ if ! command -v python3 >/dev/null || ! python3 -c 'import yaml' 2>/dev/null; th
   exit 1
 fi
 if [[ -f "$install_dir/launch.args" && $# -eq 0 ]]; then
-  exec bash "$source_dir/install-local.sh"
+  bash "$source_dir/install-local.sh"
+  if systemctl --user is-enabled --quiet crusader.service 2>/dev/null; then
+    systemctl --user restart crusader.service
+  elif [[ -t 0 ]] && systemctl --user show-environment >/dev/null 2>&1; then
+    read -r -p 'Set up Crusader to start automatically at boot? [Y/n] ' service_answer
+    if [[ -z "$service_answer" || "${service_answer,,}" == y || "${service_answer,,}" == yes ]]; then
+      bash "$source_dir/install-service.sh"
+    fi
+  fi
+  exit 0
 fi
 if [[ ! -t 0 ]]; then
   printf 'Run this command in an interactive terminal for first-time setup.\n' >&2
@@ -126,7 +135,15 @@ ask 'Legacy SkywarnPlus warnings report path (blank for automatic detection)'
 if [[ -n "$answer" ]]; then args+=(--warnings "$answer"); fi
 
 bash "$source_dir/install-local.sh" "${args[@]}"
+if systemctl --user is-enabled --quiet crusader.service 2>/dev/null; then
+  bash "$source_dir/install-service.sh"
+elif systemctl --user show-environment >/dev/null 2>&1; then
+  ask 'Start Crusader automatically at boot? (Y/n)' Y
+  if [[ "${answer,,}" == y || "${answer,,}" == yes ]]; then
+    bash "$source_dir/install-service.sh"
+  fi
+fi
 printf '\nOn your workstation, forward the dashboard port over SSH:\n'
 printf '  ssh -N -L %s:127.0.0.1:%s YOUR_NODE_USER@YOUR_NODE_HOST\n' "$port" "$port"
 printf 'Then open http://127.0.0.1:%s/?live=1\n' "$port"
-printf 'The launcher prompts for the AMI secret if enabled and creates the first Administrator account on first launch.\n'
+printf 'For manual startup, the launcher prompts for the AMI secret if enabled and creates the first Administrator account on first launch.\n'

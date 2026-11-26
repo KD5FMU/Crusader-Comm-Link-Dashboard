@@ -2,9 +2,11 @@
 set -euo pipefail
 
 install_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+extra=()
 case "${1:-}" in
   '') release=current ;;
   --previous) release=previous ;;
+  --setup-service|--service) release=current; extra=("$1") ;;
   *) echo 'Usage: crusader [--previous]' >&2; exit 2 ;;
 esac
 if [[ ! -f "$install_dir/$release/local_console.py" || ! -f "$install_dir/launch.args" ]]; then
@@ -16,4 +18,4 @@ if [[ "$release" == previous && -f "$install_dir/previous.args" ]]; then
   args_file="$install_dir/previous.args"
 fi
 mapfile -d '' -t options < "$args_file"
-exec python3 "$install_dir/$release/local_console.py" "${options[@]}"
+exec python3 "$install_dir/$release/local_console.py" "${options[@]}" "${extra[@]}"

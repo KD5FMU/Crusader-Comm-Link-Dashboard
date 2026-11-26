@@ -873,6 +873,9 @@ def main():
     parser.add_argument("--ami-user", help="Enable per-link receive telemetry with a local AMI account")
     parser.add_argument("--control-peer", action="append", default=[], help="Allow link commands for this specific peer; repeat for more peers")
     parser.add_argument("--control-any-peer", action="store_true", help="Allow operators to enter a numeric peer directly")
+    launch_mode = parser.add_mutually_exclusive_group()
+    launch_mode.add_argument("--setup-service", action="store_true", help="Initialize the account and save optional AMI credentials for systemd")
+    launch_mode.add_argument("--service", action="store_true", help="Start without interactive prompts")
     options = parser.parse_args()
     if options.control_peer or options.control_any_peer:
         if not options.ami_user or not options.node:
@@ -881,15 +884,37 @@ def main():
             parser.error("--control-peer must be a numeric peer ID different from --node")
     if options.node is not None and not re.fullmatch(r"[0-9]{3,10}", options.node):
         parser.error("--node must be a numeric node ID")
+    data = Path(environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "crusader-comm-link"
+    credential = data / "ami-credential.json"
     if options.ami_user:
         if not options.node:
-            parser.error("--ami-user requires --node")
-        options.ami_secret = getpass.getpass("Local Asterisk AMI secret: ")
-        if not options.ami_secret or any(c in options.ami_user + options.ami_secret for c in "\r\n"):
+            parser.error("AMI requires --node")
+        if options.service:
+            try:
+                with credential.open(encoding="utf-8") as stream:
+                    details = fstat(stream.fileno())
+                    if details.st_uid != geteuid() or details.st_mode & 0o077:
+                        raise ValueError("Credential file must be private")
+                    stored = json.load(stream)
+                if stored["username"] != options.ami_user:
+                    raise ValueError("AMI username changed")
+                options.ami_secret = stored["secret"]
+            except (OSError, ValueError, KeyError, TypeError):
+                parser.error("Run the service setup again to configure the AMI credential.")
+        else:
+            options.ami_secret = getpass.getpass("Local Asterisk AMI secret: ")
+        if (not isinstance(options.ami_secret, str) or not options.ami_secret
+                or any(c in options.ami_user + options.ami_secret for c in "\r\n")):
             parser.error("Invalid AMI credentials")
-    data = Path(environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "crusader-comm-link"
+        if options.setup_service:
+            try:
+                receive_activity(options.node, options.ami_user, options.ami_secret)
+            except (OSError, ValueError):
+                parser.error("Could not verify the AMI account and node. Check the credentials and local Asterisk before retrying.")
     options.accounts = Accounts(data / "accounts.sqlite3")
     if options.node and not options.accounts.users():
+        if options.service:
+            parser.error("Initialize the administrator account with the service setup first.")
         print("Create your first Crusader Administrator account.")
         name = input("Administrator username: ").strip()
         password = getpass.getpass("Administrator password (12+ characters): ")
@@ -899,6 +924,18 @@ def main():
             options.accounts.save(name, password, "Administrator")
         except ValueError as error:
             parser.error(str(error))
+    if options.setup_service:
+        if options.ami_user:
+            with NamedTemporaryFile(mode="w", encoding="utf-8", dir=data, delete=False) as stream:
+                json.dump({"username":options.ami_user, "secret":options.ami_secret}, stream)
+            pending = Path(stream.name)
+            try:
+                replace(pending, credential)
+            finally:
+                pending.unlink(missing_ok=True)
+        else:
+            credential.unlink(missing_ok=True)
+        return
     options.station_directory = StationDirectory()
     options.news_feeds = NewsFeeds()
     options.control_lock = Lock()

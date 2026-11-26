@@ -11,7 +11,7 @@ The repository is public. To install, you need SSH access to your Debian-based A
 
 ```sh
 sudo apt install git python3 python3-yaml
-git clone --branch v0.1.0-beta.1 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git
+git clone --branch v0.1.0-beta.2 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git
 cd Crusader-Comm-Link-Dashboard
 bash install.sh
 ```
@@ -22,25 +22,31 @@ The installer writes to `${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link
 
 ## Start and open the dashboard
 
-On the node, start the launcher:
+Choose **Yes** when the installer offers to start Crusader automatically at boot. Setup creates the administrator account if needed and asks for the AMI secret if telemetry is enabled. The service runs as your node login account and keeps the AMI credential in an owner-readable local file. Enabling user services at boot may require your sudo password once.
+
+To add the service to an existing installation or refresh its credentials, run the following on the node. Stop a foreground Crusader process with **Ctrl+C** first if it is using the dashboard port.
 
 ```sh
-"${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link/crusader"
+bash install-service.sh
 ```
 
-Enter the AMI secret if you enabled it. At first launch, choose a Crusader administrator username and a password of at least 12 characters. The AMI secret is entered at runtime and is kept out of the installer’s saved options.
-
-From your workstation, open a second terminal and forward the selected port. This example uses the default port 8877.
+From another computer, open an SSH tunnel when you need remote access. This example uses the default port 8877.
 
 ```sh
 ssh -N -o ExitOnForwardFailure=yes -L 8877:127.0.0.1:8877 YOUR_NODE_USER@YOUR_NODE_HOST
 ```
 
-Leave both terminals open and visit [the live dashboard](http://127.0.0.1:8877/?live=1). The server listens on loopback.
+Open [the live dashboard](http://127.0.0.1:8877/?live=1). Only the tunnel needs to stay open on your workstation. The dashboard runs on loopback and starts again after a node reboot.
+
+If you prefer manual startup, decline the service and run `"${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link/crusader"` on the node.
 
 ## Update, reconfigure, or roll back
 
-Stop the running Crusader launcher with **Ctrl+C** before changing the installed release. Check out the new beta tag and run `bash install.sh` again. By default the installer reuses the saved launch settings. Run `bash install.sh --reconfigure` to choose new launch settings. Use the launcher with `--previous` to run the preceding installed build and its saved options. Accounts and branding are stored in the Crusader data directory, while layouts, themes, and favorites are saved in the browser.
+Fetch and check out the new beta tag, then run `bash install.sh` again. It reuses your saved settings and restarts the enabled service. Stop a manually launched dashboard before updating. Run `bash install.sh --reconfigure` to choose new settings. Use the launcher with `--previous` for a manual rollback after stopping the running dashboard.
+
+Use `systemctl --user status crusader.service` to check the service and `journalctl --user -u crusader.service -n 50` to see recent logs. To turn off automatic startup, run `systemctl --user disable --now crusader.service`.
+
+Accounts and branding are stored in the Crusader data directory. Layouts, themes, and favorites are saved in the browser.
 
 ## Accounts and local integrations
 
