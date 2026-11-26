@@ -1,10 +1,13 @@
 # Crusader Comm/Link Dashboard
 
+> [!WARNING]
+> **Public beta — proceed with caution.** Features and behavior may change. Test on a non-critical ASL3 node first and back up your Asterisk configuration before using the editor or station controls. Service stop, restart, and reboot can interrupt an active station.
+
 Crusader is an AllStarLink 3 dashboard for monitoring and operating a local station. It includes a link map and receive indicators, a Live Caller pop-out, SkywarnPlus, weather radar, a news ticker, favorites, and configurable layouts and themes.
 
 ## Install the beta
 
-Beta testers need read access to this repository, SSH access to their own Debian-based ASL3 node, Git, Python 3, and PyYAML. Run the following on the ASL3 node as your normal login user.
+The repository is public. To install, you need SSH access to your Debian-based ASL3 node, Git, Python 3, and PyYAML. Run the following on the ASL3 node as your normal login user.
 
 ```sh
 sudo apt install git python3 python3-yaml
