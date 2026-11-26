@@ -11,7 +11,7 @@ The repository is public. To install, you need SSH access to your Debian-based A
 
 ```sh
 sudo apt install git python3 python3-yaml
-git clone --branch v0.1.0-beta.3 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git
+git clone --branch v0.1.0-beta.4 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git
 cd Crusader-Comm-Link-Dashboard
 bash install.sh
 ```
@@ -39,6 +39,18 @@ ssh -N -o ExitOnForwardFailure=yes -L 8877:127.0.0.1:8877 YOUR_NODE_USER@YOUR_NO
 Open [the live dashboard](http://127.0.0.1:8877/?live=1). Only the tunnel needs to stay open on your workstation. The dashboard runs on loopback and starts again after a node reboot.
 
 If you prefer manual startup, decline the service and run `"${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link/crusader"` on the node.
+
+## Open Crusader from your LAN
+
+If Apache already serves HTTPS on your ASL3 node, you can add a private-LAN route to the running Crusader service. From the repository directory on the node, run the following with your actual HTTPS hostname and LAN subnet. The hostname must match the address you use in the browser.
+
+```sh
+bash install-apache.sh https://node.example.local 192.168.1.0/24
+```
+
+Open `https://node.example.local/crusader/` on your workstation and sign in. The helper enables the Apache reverse proxy, restricts the route to the supplied private subnet, and restarts Crusader. Use an HTTPS certificate your browser trusts. Preferences stored by the browser are scoped to the dashboard address.
+
+To remove the LAN route, run `sudo a2disconf crusader-lan && sudo systemctl reload apache2`.
 
 ## Update, reconfigure, or roll back
 

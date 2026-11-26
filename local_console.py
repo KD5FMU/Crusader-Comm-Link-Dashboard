@@ -577,6 +577,18 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
         self.options = options
         super().__init__(*args, **kwargs)
 
+    def prepare_route(self):
+        self.mount = ""
+        if self.path.startswith("/crusader/") and self.options.https_origin:
+            self.mount = "/crusader"
+            self.path = self.path[len(self.mount):]
+        return not self.path.startswith("/crusader/")
+
+    def session_cookie(self, value, max_age):
+        secure = "; Secure" if self.mount else ""
+        return (f"crusader_session={value}; Path={self.mount}/; HttpOnly; "
+                f"SameSite=Strict; Max-Age={max_age}{secure}")
+
     def token(self):
         try:
             cookie = SimpleCookie(self.headers.get("Cookie", ""))
@@ -595,12 +607,15 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
         return data
 
     def do_GET(self):
+        if not self.prepare_route():
+            self.send_error(404)
+            return
         url = urlsplit(self.path)
         path = url.path
         account = self.options.accounts.session(self.token())
         if path in {"/", "/index.html"} and self.options.node and "live" not in parse_qs(url.query):
             self.send_response(303)
-            self.send_header("Location", "/?live=1")
+            self.send_header("Location", self.mount + "/?live=1")
             self.end_headers()
             return
         if path == "/api/session":
@@ -721,10 +736,16 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
         self.send_json(result)
 
     def do_POST(self):
+        if not self.prepare_route():
+            self.send_error(404)
+            return
         options = self.options
         origin = self.headers.get("Origin")
-        if origin not in {f"http://127.0.0.1:{options.port}", f"http://localhost:{options.port}"}:
-            self.send_json({"message": "Open the dashboard using the local SSH tunnel."}, 403)
+        allowed_origins = {options.https_origin} if self.mount else {
+            f"http://127.0.0.1:{options.port}", f"http://localhost:{options.port}"
+        }
+        if origin not in allowed_origins:
+            self.send_json({"message": "Open the dashboard using its configured address."}, 403)
             return
         if self.path == "/api/login":
             try:
@@ -736,7 +757,7 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
                 self.send_json({"message":"Sign-in failed. Check your credentials and try again."}, 401)
             else:
                 token, account = session
-                self.send_json({"account":account}, cookie=f"crusader_session={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age={SESSION_SECONDS}")
+                self.send_json({"account":account}, cookie=self.session_cookie(token, SESSION_SECONDS))
             return
         account = options.accounts.session(self.token())
         if not account:
@@ -744,7 +765,7 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
             return
         if self.path == "/api/logout":
             options.accounts.logout(self.token())
-            self.send_json({}, cookie="crusader_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0")
+            self.send_json({}, cookie=self.session_cookie("", 0))
             return
         if self.path in {"/api/users", "/api/logo", "/api/landing"}:
             if account["role"] != "Administrator":
@@ -911,6 +932,10 @@ def main():
                 receive_activity(options.node, options.ami_user, options.ami_secret)
             except (OSError, ValueError):
                 parser.error("Could not verify the AMI account and node. Check the credentials and local Asterisk before retrying.")
+    origin_file = data / "https-origin"
+    options.https_origin = origin_file.read_text(encoding="utf-8").strip() if origin_file.is_file() else ""
+    if options.https_origin and not re.fullmatch(r"https://[a-zA-Z0-9.-]+", options.https_origin):
+        parser.error("Invalid HTTPS origin in the Crusader configuration directory.")
     options.accounts = Accounts(data / "accounts.sqlite3")
     if options.node and not options.accounts.users():
         if options.service:
