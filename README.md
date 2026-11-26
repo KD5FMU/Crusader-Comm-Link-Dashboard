@@ -48,6 +48,34 @@ Use `systemctl --user status crusader.service` to check the service and `journal
 
 Accounts and branding are stored in the Crusader data directory. Layouts, themes, and favorites are saved in the browser.
 
+## Uninstall Crusader
+
+Run these steps on the node as the account that installed Crusader.
+
+1. If you enabled automatic startup, stop and disable the service. Remove its unit only after the first command succeeds.
+
+   ```sh
+   systemctl --user disable --now crusader.service &&
+     rm -- "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/crusader.service" &&
+     systemctl --user daemon-reload
+   ```
+
+   If you started Crusader manually, press **Ctrl+C** in the terminal running it instead. Skip the service commands if you never installed the service.
+
+2. To remove the installed program and keep your data for a later reinstall, run:
+
+   ```sh
+   crusader_dir="${XDG_DATA_HOME:-$HOME/.local/share}/crusader-comm-link"
+   rm -f -- "$crusader_dir/crusader" "$crusader_dir/current" "$crusader_dir/previous"
+   rm -rf -- "$crusader_dir/releases"
+   ```
+
+   The remaining directory contains launch settings, accounts, branding, and any stored AMI credential. For a **complete removal**, back up anything you want to keep and delete the `crusader-comm-link` directory instead. The repository checkout can be deleted separately.
+
+3. Close any SSH tunnel you opened for Crusader. If you want to remove browser-only preferences, clear site data for the dashboard address.
+
+These steps are limited to Crusader. User lingering is an account-wide systemd setting, so leave it enabled if other user services rely on it.
+
 ## Accounts and local integrations
 
 Administrators manage users, branding, and local station tools. Sysops can operate links permitted by setup. Observers can monitor the dashboard. Station tools depend on the permissions of the existing OS and AMI accounts. Manage those separately from Crusader.
