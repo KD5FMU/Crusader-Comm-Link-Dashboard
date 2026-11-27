@@ -222,12 +222,12 @@ body.landing-visible{min-height:100vh;background-image:linear-gradient(#07101b70
 .station-header-details:has(#stationAlerts .panel[hidden]){grid-template-columns:auto auto}
 #stationAlerts{min-width:0}
 #stationAlerts:not(:has(.panel:not([hidden]))){display:none}
-#stationAlerts .panel{max-height:4.65rem;overflow:auto;margin:0}
-#stationAlerts .panel-head{padding:.3rem .55rem}
-#stationAlerts .panel-head h2{font-size:.9rem}
+#stationAlerts .panel{margin:0}
+#stationAlerts .panel-head{padding:.22rem .55rem;line-height:1.15}
+#stationAlerts .panel-head h2{font-size:.8rem}
 #stationAlerts .panel-head .eyebrow{font-size:.58rem;margin-bottom:.08rem}
-#stationAlerts .alert-body{padding:.28rem .55rem;font-size:.75rem}
-#stationAlerts .alert-body p{margin:.12rem 0 0}
+#stationAlerts .alert-body{padding:.22rem .55rem;font-size:.7rem;line-height:1.2;overflow-wrap:anywhere}
+#stationAlerts .alert-body p{margin:.12rem 0 0;font-size:inherit}
 #stationAlerts .alert-body pre{margin:.25rem 0 0}
 .station-header-details .radio-indicators{flex-direction:column;gap:.18rem;margin:0}
 .station-header-details .radio-indicators span{min-width:2.25rem;min-height:1.4rem;font-size:.75rem}
