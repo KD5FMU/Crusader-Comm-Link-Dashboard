@@ -1266,8 +1266,87 @@ function enableWeatherOverlays() {
   setInterval(() => { refreshRadar(); refreshWarnings(); },60000);
 }
 
+function enableAircraftOverlay() {
+  const toggle = byId('mapAircraft');
+  const status = byId('mapAircraftStatus');
+  const layer = L.layerGroup().addTo(linkMap);
+  const attribution = '<a href="https://airplanes.live/" target="_blank" rel="noopener">Airplanes.live</a>';
+  let generation = 0;
+  let pending = false;
+  let nextFetch = 0;
+
+  async function refresh() {
+    if (!toggle.checked || document.hidden || linkMap.getContainer().closest('[hidden]') ||
+        pending || Date.now() < nextFetch) return;
+    pending = true;
+    nextFetch = Date.now() + 15000;
+    const request = generation;
+    const center = linkMap.wrapLatLng(linkMap.getCenter());
+    const radius = Math.max(1,Math.min(250,Math.ceil(linkMap.distance(center,linkMap.getBounds().getNorthEast()) / 1852)));
+    try {
+      const url = 'https://api.airplanes.live/v2/point/' +
+        [center.lat.toFixed(3),center.lng.toFixed(3),radius].join('/');
+      const {ac} = await fetchJson(url);
+      if (request !== generation) return;
+      if (!Array.isArray(ac)) throw new Error('Invalid aircraft feed');
+      layer.clearLayers();
+      let count = 0;
+      const bounds = linkMap.getBounds();
+      for (const plane of ac) {
+        if (!Number.isFinite(plane?.lat) || Math.abs(plane.lat) > 90 ||
+            !Number.isFinite(plane.lon) || Math.abs(plane.lon) > 180) continue;
+        const longitude = plane.lon + 360 * Math.round((linkMap.getCenter().lng - plane.lon) / 360);
+        const position = [plane.lat,longitude];
+        if (!bounds.contains(position)) continue;
+        const name = (typeof plane.flight === 'string' && plane.flight.trim()) ||
+          (typeof plane.hex === 'string' && plane.hex.toUpperCase()) || 'Aircraft';
+        const heading = Number.isFinite(plane.track) ? plane.track : null;
+        const icon = document.createElement('span');
+        icon.className = 'aircraft-symbol';
+        icon.textContent = heading === null ? '●' : '✈';
+        if (heading !== null) icon.style.transform = 'rotate(' + (heading - 90) + 'deg)';
+        const details = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = name;
+        const altitude = document.createElement('div');
+        altitude.textContent = plane.alt_baro === 'ground' ? 'On ground' :
+          Number.isFinite(plane.alt_baro) ? plane.alt_baro.toLocaleString() + ' ft' : 'Altitude unavailable';
+        details.append(title,altitude);
+        L.marker(position,{title:name,icon:L.divIcon({className:'aircraft-marker',html:icon,iconSize:[22,22],iconAnchor:[11,11]})})
+          .bindPopup(details).addTo(layer);
+        count++;
+      }
+      status.textContent = count ? count + ' aircraft' : 'No aircraft in view';
+      if (radius === 250) status.textContent += ' · Within 250 NM of map center';
+    } catch {
+      if (request !== generation) return;
+      layer.clearLayers();
+      status.textContent = 'Airplanes.live feed unavailable';
+    } finally {
+      pending = false;
+    }
+  }
+
+  toggle.onchange = () => {
+    generation++;
+    if (toggle.checked) {
+      linkMap.attributionControl?.addAttribution(attribution);
+      status.textContent = 'Loading aircraft…';
+      refresh();
+    } else {
+      layer.clearLayers();
+      linkMap.attributionControl?.removeAttribution(attribution);
+      status.textContent = '';
+    }
+  };
+  toggle.checked = false;
+  linkMap.on('moveend',refresh);
+  setInterval(refresh,1000);
+}
+
 linkMap = buildMap('linkMap',home,5);
 enableWeatherOverlays();
+enableAircraftOverlay();
 linksLayer = L.layerGroup().addTo(linkMap);
 linkMap.on('move zoom resize',queueMapLabels);
 document.fonts?.ready.then(queueMapLabels);

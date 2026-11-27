@@ -242,3 +242,7 @@ body.landing-visible{min-height:100vh;background-image:linear-gradient(#07101b70
   .station-header-details:has(#stationAlerts .panel[hidden]){grid-template-columns:auto minmax(0,1fr)}
   .station-header-details .station-status{grid-column:1/-1}
 }
+
+.aircraft-marker{display:grid;place-items:center;color:#ffdd75;text-shadow:0 1px 3px #14100a,0 0 3px #14100a}
+.aircraft-symbol{display:block;font:700 19px/1 system-ui,sans-serif}
+#mapAircraftStatus{color:var(--muted);font-size:.85rem}

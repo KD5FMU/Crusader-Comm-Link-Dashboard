@@ -6,10 +6,10 @@
 <meta name="description" content="An interactive AllStarLink 3 station console prototype.">
 <title>Crusader Comm/Link</title>
 <link rel="stylesheet" href="leaflet.css">
-<link rel="stylesheet" href="console.css?v=skywarn-text">
+<link rel="stylesheet" href="console.css?v=aircraft-overlay">
 <script>if (new URLSearchParams(location.search).get("live") === "1") document.documentElement.classList.add("session-pending");</script>
 <script defer src="leaflet.js"></script>
-<script defer src="console.js?v=station-alerts"></script>
+<script defer src="console.js?v=aircraft-overlay"></script>
 </head>
 <body>
 <section id="landing" class="landing panel" hidden>
@@ -48,11 +48,13 @@
 <section class="panel network" data-module="map" aria-label="Network map">
 <header class="panel-head"><div><p class="eyebrow">ALLSTARLINK NETWORK</p><h2>Link map</h2></div><div class="panel-actions"><button class="pop-button" data-pop="map">Pop out</button></div></header>
 <div class="map-shell"><div id="linkMap" aria-label="Interactive map of connected demo stations"></div><div class="legend"><span><i></i> Linked</span><span id="txLegend"><i></i> Transmitting</span></div></div>
-<div class="weather-toolbar" aria-label="Weather overlays">
+<div class="weather-toolbar" aria-label="Map overlays">
   <label>Radar <select id="mapRadar"><option value="off">Off</option><option value="us">United States</option><option value="world">Global coverage</option></select></label>
   <button id="mapRadarPlay" type="button" disabled>Play radar</button>
   <label><input id="mapCounties" type="checkbox"> U.S. counties</label>
   <label><input id="mapWarnings" type="checkbox"> NWS watches &amp; warnings</label>
+  <label><input id="mapAircraft" type="checkbox" autocomplete="off"> Aircraft</label>
+  <span id="mapAircraftStatus" role="status"></span>
   <span id="mapWeatherStatus" role="status"></span>
 </div>
 <footer class="map-footer"><span id="traffic" aria-live="polite"></span><div><button id="fit">Fit network</button> <button id="simulate" class="primary">Simulate RX</button></div></footer>

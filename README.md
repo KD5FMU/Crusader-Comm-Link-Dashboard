@@ -11,7 +11,7 @@ Run these commands in a terminal **on the ASL3 node** as your normal login user.
 
 ```sh
 sudo apt install git curl python3 python3-yaml &&
-git clone --branch v0.1.0-beta.9 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git &&
+git clone --branch v0.1.0-beta.10 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git &&
 cd Crusader-Comm-Link-Dashboard &&
 bash install.sh
 ```
@@ -52,7 +52,7 @@ Run this from your normal login account on the node.
 ```sh
 cd "$HOME/Crusader-Comm-Link-Dashboard" &&
 git fetch --tags &&
-git checkout v0.1.0-beta.9 &&
+git checkout v0.1.0-beta.10 &&
 bash install.sh
 ```
 
@@ -112,5 +112,7 @@ In live mode, use **Station tools** for public node lookup and bubble charts, lo
 ## Live map weather and ticker news
 
 The Link map offers U.S. radar from the Iowa Environmental Mesonet and global radar where RainViewer has coverage. Select a source for the latest available still, or play the recent frame loop. The dashboard checks for new frames every minute. Frame age and coverage depend on the source. County boundaries use U.S. Census geometry distributed by [us-atlas](https://github.com/topojson/us-atlas). The NWS watches and warnings overlay uses the National Weather Service's active watch, warning and advisory map service.
+
+Turn on **Aircraft** in the Link map to request nearby aircraft from [Airplanes.live](https://airplanes.live/). The browser uses the map center and a radius up to 250 nautical miles, refreshing about every 15 seconds while the map is visible. Select a marker for its callsign and reported altitude, when available. The overlay starts off and depends on Airplanes.live coverage and access from your browser.
 
 In **Configuration → Status ticker**, select separate sources for national, local, and breaking headlines. The default national and breaking source is ABC News. KJRH Tulsa is the default local source. The locally installed dashboard reads the selected publishers' RSS feeds through its signed-in news endpoint. A headline gets red styling when its publisher tags it as breaking or explicitly labels it as breaking at the start of the headline.
