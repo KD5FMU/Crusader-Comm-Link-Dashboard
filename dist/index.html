@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="console.css?v=aircraft-overlay">
 <script>if (new URLSearchParams(location.search).get("live") === "1") document.documentElement.classList.add("session-pending");</script>
 <script defer src="leaflet.js"></script>
-<script defer src="console.js?v=aircraft-overlay"></script>
+<script defer src="console.js?v=remote-access"></script>
 </head>
 <body>
 <section id="landing" class="landing panel" hidden>
@@ -144,6 +144,11 @@
     <section id="operatorTools" hidden><h3>Local repeater</h3>
       <form id="stationDtmf"><label>DTMF digits <input id="stationDigits" required maxlength="16" pattern="[0-9*#A-Da-d]{1,16}"></label><button>Send DTMF</button></form>
       <div class="station-tools-actions"><button data-station-action="identify">Announce ID</button><button data-station-action="time">Announce time</button></div>
+    </section>
+    <section id="remoteAccessTools" hidden><h3>Private remote access</h3>
+      <p id="remoteAccessStatus" role="status"></p>
+      <div class="station-tools-actions"><a id="remoteAccessLink" hidden>Open Tailscale dashboard ↗</a>
+        <button id="remoteAccessToggle" type="button" hidden>Enable remote access</button></div>
     </section>
     <section id="localAdminTools" hidden><h3>Local administration</h3><div class="station-tools-actions">
       <button data-station-action="reload">Reload IAX, app_rpt and dialplan</button>

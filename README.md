@@ -11,7 +11,7 @@ Run these commands in a terminal **on the ASL3 node** as your normal login user.
 
 ```sh
 sudo apt install git curl python3 python3-yaml &&
-git clone --branch v0.1.0-beta.10 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git &&
+git clone --branch v0.1.0-beta.11 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git &&
 cd Crusader-Comm-Link-Dashboard &&
 bash install.sh
 ```
@@ -28,6 +28,20 @@ If you already cloned the repository, use the update commands below.
 Copy the address printed at the end of setup into a browser on another computer on the same network. For example, use `https://node576332.local/crusader/?live=1`. Sign in with the Crusader administrator account you created. If your browser warns about the HTTPS certificate, verify and trust the node’s certificate before signing in.
 
 Crusader runs as a background service and starts again after a node reboot. You can close the installation terminal and bookmark the dashboard address.
+
+### Optional remote access with Tailscale
+
+At the end of a first install, choose **Yes** at the Tailscale prompt to set up private remote browser access. Press Enter to skip. If Tailscale is missing, the wizard asks before downloading and running its official installer. Open the Tailscale sign-in link to create an account or use an existing one. Follow its prompts for MagicDNS and HTTPS if needed.
+
+For an existing installation, update Crusader first, then run this from the repository on the node:
+
+```sh
+bash install.sh --tailscale
+```
+
+The wizard uses Tailscale Serve on HTTPS port 8443 and prints your remote bookmark. On the remote computer, sign into Tailscale on the same private network, open the bookmark, and sign into Crusader. Your Tailscale access rules must allow the remote device to reach this node on TCP 8443.
+
+Under **Station tools → Private remote access**, a Crusader Administrator can turn dashboard access over Tailscale off or back on. This blocks Crusader at its remote address while keeping the private Serve listener and the node’s Tailscale connection running. If you turn it off remotely, use the LAN dashboard to re-enable it. To remove the Serve route itself, if port 8443 is still reserved for Crusader, run `sudo tailscale serve --https=8443 off` on the node.
 
 ### Manual network setup
 
@@ -52,7 +66,7 @@ Run this from your normal login account on the node.
 ```sh
 cd "$HOME/Crusader-Comm-Link-Dashboard" &&
 git fetch --tags &&
-git checkout v0.1.0-beta.10 &&
+git checkout v0.1.0-beta.11 &&
 bash install.sh
 ```
 
@@ -88,7 +102,9 @@ Run these steps on the node as the account that installed Crusader.
 
 3. If you enabled LAN access, remove the Crusader Apache route with `sudo a2disconf crusader-lan && sudo apache2ctl configtest && sudo systemctl reload apache2 && sudo rm /etc/apache2/conf-available/crusader-lan.conf`.
 
-4. Close any SSH tunnel you opened for Crusader. If you want to remove browser-only preferences, clear site data for the dashboard address.
+4. If you set up Tailscale, remove the Crusader Serve route with `sudo tailscale serve --https=8443 off` if that port still serves Crusader.
+
+5. Close any SSH tunnel you opened for Crusader. If you want to remove browser-only preferences, clear site data for the dashboard address.
 
 These steps are limited to Crusader. User lingering is an account-wide systemd setting, so leave it enabled if other user services rely on it.
 

@@ -579,10 +579,27 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
 
     def prepare_route(self):
         self.mount = ""
-        if self.path.startswith("/crusader/") and self.options.https_origin:
+        self.route_origin = self.options.https_origin
+        forwarded_host = self.headers.get("X-Forwarded-Host", "")
+        self.tailscale_request = bool(self.options.tailscale_origin and
+                                      "https://" + forwarded_host == self.options.tailscale_origin)
+        if self.tailscale_request:
+            if (self.headers.get("X-Forwarded-Proto") != "https" or
+                    not self.headers.get("Tailscale-User-Login") or
+                    self.options.tailscale_disabled.exists() or
+                    not self.path.startswith("/crusader/")):
+                return False
+            self.route_origin = self.options.tailscale_origin
+        if self.path.startswith("/crusader/") and self.route_origin:
             self.mount = "/crusader"
             self.path = self.path[len(self.mount):]
         return not self.path.startswith("/crusader/")
+
+    def do_HEAD(self):
+        if not self.prepare_route():
+            self.send_error(404)
+            return
+        super().do_HEAD()
 
     def session_cookie(self, value, max_age):
         secure = "; Secure" if self.mount else ""
@@ -639,6 +656,14 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
             return
         if path.startswith("/api/") and not account:
             self.send_json({"message":"Sign in to continue."}, 401)
+            return
+        if path == "/api/remote-access":
+            if account["role"] != "Administrator":
+                self.send_json({"message":"Administrator access required."}, 403)
+                return
+            origin = self.options.tailscale_origin
+            self.send_json({"url":origin + "/crusader/" if origin else "",
+                            "enabled":bool(origin and not self.options.tailscale_disabled.exists())})
             return
         if path == "/api/users":
             self.send_json({"users":self.options.accounts.users()} if account["role"] == "Administrator" else {"message":"Administrator access required."}, 200 if account["role"] == "Administrator" else 403)
@@ -741,7 +766,7 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
             return
         options = self.options
         origin = self.headers.get("Origin")
-        allowed_origins = {options.https_origin} if self.mount else {
+        allowed_origins = {self.route_origin} if self.mount else {
             f"http://127.0.0.1:{options.port}", f"http://localhost:{options.port}"
         }
         if origin not in allowed_origins:
@@ -766,6 +791,27 @@ class ConsoleHandler(SimpleHTTPRequestHandler):
         if self.path == "/api/logout":
             options.accounts.logout(self.token())
             self.send_json({}, cookie=self.session_cookie("", 0))
+            return
+        if self.path == "/api/remote-access":
+            if account["role"] != "Administrator":
+                self.send_json({"message":"Administrator access required."}, 403)
+                return
+            if not options.tailscale_origin:
+                self.send_json({"message":"Set up Tailscale on the node first."}, 409)
+                return
+            try:
+                enabled = self.read_json(128).get("enabled")
+                if type(enabled) is not bool:
+                    raise ValueError
+                if enabled:
+                    options.tailscale_disabled.unlink(missing_ok=True)
+                else:
+                    options.tailscale_disabled.touch(mode=0o600)
+                self.send_json({"enabled":enabled})
+            except ValueError:
+                self.send_json({"message":"Invalid remote access request."}, 400)
+            except OSError:
+                self.send_json({"message":"Could not save remote access settings."}, 500)
             return
         if self.path in {"/api/users", "/api/logo", "/api/landing"}:
             if account["role"] != "Administrator":
@@ -936,6 +982,11 @@ def main():
     options.https_origin = origin_file.read_text(encoding="utf-8").strip() if origin_file.is_file() else ""
     if options.https_origin and not re.fullmatch(r"https://[a-zA-Z0-9.-]+", options.https_origin):
         parser.error("Invalid HTTPS origin in the Crusader configuration directory.")
+    tailscale_file = data / "tailscale-origin"
+    options.tailscale_origin = tailscale_file.read_text(encoding="utf-8").strip() if tailscale_file.is_file() else ""
+    if options.tailscale_origin and not re.fullmatch(r"https://[a-z0-9-]+(?:\.[a-z0-9-]+)+\.ts\.net:8443", options.tailscale_origin):
+        parser.error("Invalid Tailscale HTTPS origin in the Crusader configuration directory.")
+    options.tailscale_disabled = data / "tailscale-disabled"
     options.accounts = Accounts(data / "accounts.sqlite3")
     if options.node and not options.accounts.users():
         if options.service:

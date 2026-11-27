@@ -11,16 +11,16 @@ fi
 
 case "${1:-}" in
   -h|--help)
-    printf '%s\n' 'Usage: bash install.sh [--reconfigure]' \
+    printf '%s\n' 'Usage: bash install.sh [--reconfigure | --tailscale]' \
       'First install detects the local node and prompts for settings.' \
       'An update preserves saved settings unless --reconfigure is supplied.'
     exit 0
     ;;
-  ''|--reconfigure) ;;
+  ''|--reconfigure|--tailscale) ;;
   *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
 esac
 if (( $# > 1 )); then
-  printf 'Usage: bash install.sh [--reconfigure]\n' >&2
+  printf 'Usage: bash install.sh [--reconfigure | --tailscale]\n' >&2
   exit 2
 fi
 if (( EUID == 0 )); then
@@ -31,6 +31,10 @@ if ! command -v python3 >/dev/null || ! python3 -c 'import yaml' 2>/dev/null; th
   printf 'Install Python and PyYAML first on Debian or ASL3 with: sudo apt install python3 python3-yaml\n' >&2
   exit 1
 fi
+if [[ "${1:-}" == --tailscale ]]; then
+  exec bash "$source_dir/install-tailscale.sh"
+fi
+
 configure_browser_access() {
   if ! systemctl --user is-active --quiet crusader.service; then
     printf 'Browser access from another computer requires the Crusader service. Run bash install.sh again to enable it.\n'
@@ -213,4 +217,12 @@ elif [[ -d /run/systemd/system ]] || systemctl --user show-environment >/dev/nul
     bash "$source_dir/install-service.sh"
   fi
 fi
-configure_browser_access
+lan_result=0
+configure_browser_access || lan_result=$?
+if [[ -t 0 && ! -s "$install_dir/tailscale-origin" ]]; then
+  ask 'Set up private remote browser access with Tailscale? (y/N)' N
+  if [[ "${answer,,}" == y || "${answer,,}" == yes ]]; then
+    bash "$source_dir/install-tailscale.sh"
+  fi
+fi
+exit "$lan_result"

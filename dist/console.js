@@ -2034,7 +2034,48 @@ byId('openTools').onclick = () => {
   byId('stationLookupNode').value = node ?? '';
   setStationInfoLinks(node);
   stationTools.showModal();
+  if (account?.role === 'Administrator') refreshRemoteAccess();
 };
+async function refreshRemoteAccess() {
+  const section = byId('remoteAccessTools');
+  const status = byId('remoteAccessStatus');
+  const button = byId('remoteAccessToggle');
+  const link = byId('remoteAccessLink');
+  section.hidden = false;
+  button.hidden = link.hidden = true;
+  status.textContent = 'Checking remote access…';
+  try {
+    const {url,enabled} = await fetchJson('api/remote-access');
+    if (!url) {
+      status.textContent = 'Tailscale is optional. Run bash install.sh --tailscale on the node to set it up.';
+      return;
+    }
+    status.textContent = enabled ? 'Crusader access over Tailscale is enabled.' : 'Crusader access over Tailscale is disabled.';
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.hidden = !enabled;
+    button.hidden = false;
+    button.textContent = enabled ? 'Disable remote access' : 'Enable remote access';
+    button.onclick = async () => {
+      if (enabled && !confirm('Disable Crusader access over Tailscale? Open the LAN dashboard to turn it back on.')) return;
+      button.disabled = true;
+      try {
+        await postJson('api/remote-access',{enabled:!enabled});
+        if (enabled && location.origin === new URL(url).origin) {
+          status.textContent = 'Remote access is disabled. Use the LAN dashboard to turn it back on.';
+          link.hidden = button.hidden = true;
+        } else await refreshRemoteAccess();
+      } catch {
+        status.textContent = 'Could not change remote access.';
+      } finally {
+        button.disabled = false;
+      }
+    };
+  } catch {
+    status.textContent = 'Remote access status is unavailable.';
+  }
+}
 byId('stationLookupNode').oninput = event => setStationInfoLinks(event.target.value.trim());
 byId('openLinkMap').onclick = () => document.querySelector('[data-pop="map"]').click();
 async function readStationTool(path) {
