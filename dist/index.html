@@ -6,10 +6,10 @@
 <meta name="description" content="An interactive AllStarLink 3 station console prototype.">
 <title>Crusader Comm/Link</title>
 <link rel="stylesheet" href="leaflet.css">
-<link rel="stylesheet" href="console.css?v=default-logo">
+<link rel="stylesheet" href="console.css?v=station-alerts">
 <script>if (new URLSearchParams(location.search).get("live") === "1") document.documentElement.classList.add("session-pending");</script>
 <script defer src="leaflet.js"></script>
-<script defer src="console.js?v=local-weather"></script>
+<script defer src="console.js?v=station-alerts"></script>
 </head>
 <body>
 <section id="landing" class="landing panel" hidden>
@@ -29,9 +29,16 @@
 <div class="utilities"><span class="demo"><i></i> HOSTED DEMO</span><a id="openLocal" class="local-shortcut" href="http://127.0.0.1:8877/?live=1" target="_blank" rel="noopener">Open local dashboard</a><button id="theme">☀ Day mode</button><button id="openTools" hidden>Station tools</button><button id="openCaller">Live Caller ↗</button><button id="customize">Configuration</button><button id="administration" hidden>Administration</button><button id="signOut" hidden>Sign out</button></div>
 </header>
 <main id="dashboard">
-<div class="intro"><div><p id="stationEyebrow" class="eyebrow">HAM RADIO CRUSADER</p><h1 id="stationTitle">Station overview</h1></div><div class="station-status"><time id="stationClock" class="station-clock"></time><div class="station-status-row"><div id="radioIndicators" class="radio-indicators" role="group" aria-label="Radio activity">
-<span id="radioTx" role="img">TX</span><span id="radioRx" role="img">RX</span><span id="radioCos" role="img">COS</span>
-</div><div class="station-id"><span class="eyebrow">CONTROL NODE</span><strong id="controlNode">61000 <small>DEMO / ST. LOUIS</small></strong></div></div></div></div>
+<div class="intro">
+  <div class="station-heading"><p id="stationEyebrow" class="eyebrow">HAM RADIO CRUSADER</p><h1 id="stationTitle">Station overview</h1></div>
+  <div class="station-header-details">
+    <div id="stationAlerts"></div>
+    <div id="radioIndicators" class="radio-indicators" role="group" aria-label="Radio activity">
+      <span id="radioTx" role="img">TX</span><span id="radioRx" role="img">RX</span><span id="radioCos" role="img">COS</span>
+    </div>
+    <div class="station-status"><time id="stationClock" class="station-clock"></time><div class="station-id"><span class="eyebrow">CONTROL NODE</span><strong id="controlNode">61000 <small>DEMO / ST. LOUIS</small></strong></div></div>
+  </div>
+</div>
 <p id="layoutStatus" class="visually-hidden" role="status"></p>
 <div id="layout" class="layout">
 <section class="panel" data-module="ticker" aria-label="Status ticker">

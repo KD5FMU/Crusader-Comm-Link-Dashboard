@@ -11,7 +11,7 @@ Run these commands in a terminal **on the ASL3 node** as your normal login user.
 
 ```sh
 sudo apt install git curl python3 python3-yaml &&
-git clone --branch v0.1.0-beta.6 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git &&
+git clone --branch v0.1.0-beta.7 https://github.com/KD5FMU/Crusader-Comm-Link-Dashboard.git &&
 cd Crusader-Comm-Link-Dashboard &&
 bash install.sh
 ```
@@ -52,7 +52,7 @@ Run this from your normal login account on the node.
 ```sh
 cd "$HOME/Crusader-Comm-Link-Dashboard" &&
 git fetch --tags &&
-git checkout v0.1.0-beta.6 &&
+git checkout v0.1.0-beta.7 &&
 bash install.sh
 ```
 

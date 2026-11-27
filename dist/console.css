@@ -146,7 +146,7 @@ body.landing-visible{min-height:100vh;background-image:linear-gradient(#07101b70
 #dashboard :is(.panel-grip,.resize-edge){display:none}
 .station-status{margin-inline-start:auto;display:grid;gap:.65rem;max-width:100%}
 .station-clock{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:.9rem}
-.station-status-row{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:1rem}
+
 #stationTitle{max-width:24ch;overflow-wrap:anywhere}
 .configuration-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.5rem}
 .configuration-grid{display:grid;grid-template-columns:minmax(10rem,13rem) minmax(0,48rem);gap:1rem;align-items:start}
@@ -155,7 +155,7 @@ body.landing-visible{min-height:100vh;background-image:linear-gradient(#07101b70
 #configurationNav button[aria-current]{border-color:var(--accent);color:var(--accent)}
 .configuration-playback:not([hidden]){display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem 0}
 .configuration-panel input[type=text]{width:100%}
-@media(max-width:620px){.configuration-grid{grid-template-columns:1fr}#configurationNav{display:flex;flex-wrap:wrap}.station-status-row{gap:.6rem}}
+@media(max-width:620px){.configuration-grid{grid-template-columns:1fr}#configurationNav{display:flex;flex-wrap:wrap}}
 
 #tickerPreview[hidden]{display:none}
 .mast[hidden],#caller[hidden]{display:none}
@@ -215,3 +215,23 @@ body.landing-visible{min-height:100vh;background-image:linear-gradient(#07101b70
 .leaflet-weather-radar-pane .leaflet-tile-loaded{opacity:1!important}
 .brand .insignia{width:56px;height:56px;flex:none;overflow:hidden}
 .insignia img[hidden]{display:none}
+
+.intro{align-items:center}
+.station-heading{flex:1 1 18rem;min-width:0;overflow-wrap:anywhere}
+.station-header-details{display:flex;align-items:center;flex-wrap:wrap;gap:.85rem;max-width:100%;margin-inline-start:auto}
+#stationAlerts{width:min(19rem,100%);min-width:0}
+#stationAlerts:not(:has(.panel:not([hidden]))){display:none}
+#stationAlerts .panel{min-height:0;margin:0}
+#stationAlerts .panel-head{padding:.45rem .65rem}
+#stationAlerts .panel-head h2{font-size:.95rem}
+#stationAlerts .panel-head .eyebrow{font-size:.65rem;margin-bottom:.15rem}
+#stationAlerts .alert-body{padding:.45rem .65rem;font-size:.82rem}
+#stationAlerts .alert-body pre{max-height:6rem;overflow:auto;margin-bottom:0}
+.station-header-details .radio-indicators{flex-direction:column;gap:.25rem;margin:0}
+.station-header-details .radio-indicators span{min-width:2.35rem;min-height:1.65rem;font-size:.8rem}
+.station-header-details .station-id{text-align:end}
+@media(max-width:560px){
+  .station-header-details{margin-inline-start:0;width:100%}
+  #stationAlerts{flex:1 1 12rem}
+  .station-header-details .station-status{flex-basis:100%}
+}

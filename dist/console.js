@@ -74,7 +74,7 @@ const read = () => {
   catch { return defaults; }
 };
 let state = read();
-const laneDefaults = {ticker:'top',map:'main',nodes:'side',linked:'side',weather:'side',skywarn:'side'};
+const laneDefaults = {ticker:'top',map:'main',nodes:'side',linked:'side',weather:'side'};
 const layoutPanels = Object.fromEntries([...byId('layout').children].map(panel => [panel.dataset.module,panel]));
 const workspaceLanes = Object.fromEntries(['top','main','side'].map(id => {
   const element = document.createElement('div');
@@ -372,8 +372,14 @@ function render() {
   layout.classList.toggle('workspace',workspace);
   if (workspace && !workspaceLanes.top.parentNode) layout.append(...Object.values(workspaceLanes));
   const lanePositions = {top:0,main:0,side:0};
-  state.order.forEach((id,index) => {
+  let gridPosition = 0;
+  state.order.forEach(id => {
     const panel = layoutPanels[id];
+    if (id === 'skywarn' && !panelOnly) {
+      panel.hidden = state.hidden.includes(id);
+      if (panel.parentElement !== byId('stationAlerts')) byId('stationAlerts').append(panel);
+      return;
+    }
     const slot = panelOnly || workspace ? null : state.placements[id];
     if (slot) {
       panel.dataset.pinned = 'true';
@@ -389,7 +395,7 @@ function render() {
     panel.hidden = panelOnly ? id !== detached : state.hidden.includes(id);
     const lane = laneOf(id);
     const parent = workspace ? workspaceLanes[lane] : layout;
-    const position = workspace ? lanePositions[lane]++ : index;
+    const position = workspace ? lanePositions[lane]++ : gridPosition++;
     if (parent.children[position] !== panel) parent.insertBefore(panel,parent.children[position] ?? null);
   });
   if (!workspace) for (const lane of Object.values(workspaceLanes)) lane.remove();
@@ -900,7 +906,7 @@ function addPlacementEditor(parent) {
   const legend = document.createElement('legend');
   legend.textContent = 'Tile placement';
   const tile = document.createElement('select');
-  tile.replaceChildren(...state.order.map(id => new Option(modules[id],id)));
+  tile.replaceChildren(...state.order.filter(id => id !== 'skywarn').map(id => new Option(modules[id],id)));
   const row = document.createElement('select');
   row.replaceChildren(...Array.from({length:Object.keys(modules).length},(_,index) => new Option(String(index+1),String(index+1))));
   const column = document.createElement('select');
@@ -934,7 +940,7 @@ function addPlacementEditor(parent) {
       status.textContent = 'That width does not fit at the selected column.';
       return;
     }
-    const clash = Object.entries(state.placements).find(([id,slot]) => id !== tile.value && slot.row === next.row &&
+    const clash = Object.entries(state.placements).find(([id,slot]) => id !== 'skywarn' && id !== tile.value && slot.row === next.row &&
       slot.column < next.column + next.width && next.column < slot.column + slot.width);
     if (clash) {
       status.textContent = 'That space is reserved by ' + modules[clash[0]] + '.';
@@ -1045,7 +1051,7 @@ function renderSettings() {
       addPreference(parent,['automaticLocations','Use published AllStarLink locations']);
       addStationLocations(parent);
     }
-    addPanelSize(parent,settingsSection);
+    if (settingsSection !== 'skywarn') addPanelSize(parent,settingsSection);
     if (settingsSection === 'ticker') {
       addWatchPlaces(parent);
       addPreference(parent,['tickerNews','Show news headlines']);
@@ -1081,6 +1087,11 @@ function renderSettings() {
     toggle.checked = !state.hidden.includes(id);
     toggle.onchange = () => changeLayout({hidden:toggle.checked ? state.hidden.filter(item=>item!==id) : [...state.hidden,id]});
     label.append(toggle,' ' + modules[id]);
+    if (id === 'skywarn') {
+      row.append(label);
+      parent.append(row);
+      return;
+    }
     if (state.layoutStyle === 'workspace') {
       const lane = document.createElement('select');
       lane.setAttribute('aria-label',modules[id] + ' placement');
@@ -1089,7 +1100,8 @@ function renderSettings() {
       lane.onchange = () => { changeLayout({lanes:{...state.lanes,[id]:lane.value}}); renderSettings(); };
       row.append(label,lane);
     } else row.append(label);
-    const siblings = state.layoutStyle === 'workspace' ? state.order.filter(other => laneOf(other) === laneOf(id)) : state.order;
+    const siblings = state.order.filter(other => other !== 'skywarn' &&
+      (state.layoutStyle !== 'workspace' || laneOf(other) === laneOf(id)));
     for (const [offset,name] of [[-1,'Move up'],[1,'Move down']]) {
       const button = document.createElement('button');
       const target = siblings[siblings.indexOf(id) + offset];
