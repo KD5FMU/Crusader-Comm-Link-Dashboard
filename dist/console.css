@@ -216,22 +216,29 @@ body.landing-visible{min-height:100vh;background-image:linear-gradient(#07101b70
 .brand .insignia{width:56px;height:56px;flex:none;overflow:hidden}
 .insignia img[hidden]{display:none}
 
-.intro{align-items:center}
-.station-heading{flex:1 1 18rem;min-width:0;overflow-wrap:anywhere}
-.station-header-details{display:flex;align-items:center;flex-wrap:wrap;gap:.85rem;max-width:100%;margin-inline-start:auto}
-#stationAlerts{width:min(19rem,100%);min-width:0}
+.intro{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.station-heading{min-width:0;overflow-wrap:anywhere}
+.station-header-details{display:grid;grid-template-columns:clamp(10rem,21vw,19rem) auto auto;align-items:center;gap:.75rem;min-width:0}
+.station-header-details:has(#stationAlerts .panel[hidden]){grid-template-columns:auto auto}
+#stationAlerts{min-width:0}
 #stationAlerts:not(:has(.panel:not([hidden]))){display:none}
-#stationAlerts .panel{min-height:0;margin:0}
-#stationAlerts .panel-head{padding:.45rem .65rem}
-#stationAlerts .panel-head h2{font-size:.95rem}
-#stationAlerts .panel-head .eyebrow{font-size:.65rem;margin-bottom:.15rem}
-#stationAlerts .alert-body{padding:.45rem .65rem;font-size:.82rem}
-#stationAlerts .alert-body pre{max-height:6rem;overflow:auto;margin-bottom:0}
-.station-header-details .radio-indicators{flex-direction:column;gap:.25rem;margin:0}
-.station-header-details .radio-indicators span{min-width:2.35rem;min-height:1.65rem;font-size:.8rem}
+#stationAlerts .panel{max-height:4.65rem;overflow:auto;margin:0}
+#stationAlerts .panel-head{padding:.3rem .55rem}
+#stationAlerts .panel-head h2{font-size:.9rem}
+#stationAlerts .panel-head .eyebrow{font-size:.58rem;margin-bottom:.08rem}
+#stationAlerts .alert-body{padding:.28rem .55rem;font-size:.75rem}
+#stationAlerts .alert-body p{margin:.12rem 0 0}
+#stationAlerts .alert-body pre{margin:.25rem 0 0}
+.station-header-details .radio-indicators{flex-direction:column;gap:.18rem;margin:0}
+.station-header-details .radio-indicators span{min-width:2.25rem;min-height:1.4rem;font-size:.75rem}
+.station-header-details .station-status{gap:.4rem}
 .station-header-details .station-id{text-align:end}
-@media(max-width:560px){
-  .station-header-details{margin-inline-start:0;width:100%}
-  #stationAlerts{flex:1 1 12rem}
-  .station-header-details .station-status{flex-basis:100%}
+@media(max-width:760px){
+  .intro{grid-template-columns:minmax(0,1fr)}
+  .station-header-details{grid-template-columns:minmax(0,1fr) auto auto}
+}
+@media(max-width:520px){
+  .station-header-details{grid-template-columns:minmax(0,1fr) auto}
+  .station-header-details:has(#stationAlerts .panel[hidden]){grid-template-columns:auto minmax(0,1fr)}
+  .station-header-details .station-status{grid-column:1/-1}
 }
